@@ -1,4 +1,5 @@
 ﻿require 'libsodium'
+require 'czmq'
 
 module Iodine
 end
