@@ -2,7 +2,7 @@
 
 module Iodine
   class Keychain
-    def initialize(directory)
+    def initialize(directory = 'identities')
       @directory = directory
       @identities = {}
       @mtime = File.mtime(@directory)
@@ -12,21 +12,18 @@ module Iodine
     end
 
     def lookup(identity, path)
-      if ((mtime = File.mtime(@directory)) != @mtime)
-        @mtime = mtime
-        load_ids
-      end
+      load_ids if File.mtime(@directory) != @mtime
 
-      if @identities[identity]
-        if @identities[identity].has_changed
+      if (id = @identities[identity])
+        if id.has_changed
           id_file = File.join(@directory, "#{identity}.id")
           unless File.dirname(id_file) == @directory
             fail ArgumentError, "identity=#{identity} contains illegal characters", caller
           end
-          @identities[identity] = CZMQ::Zconfig.load(id_file)
+          id = @identities[identity] = CZMQ::Zconfig.load(id_file)
         end
 
-        @identities[identity].resolve(path, nil)
+        id.resolve(path, nil)
       end
     end
 
@@ -48,11 +45,12 @@ module Iodine
     end
 
     def load_ids
+      @mtime = File.mtime(@directory)
       identities = []
       Dir.glob(File.join(@directory, '*.id')) do |id_file|
         identities << File.basename(id_file, '.id')
-        if @identities[identities.last]
-          if @identities[identities.last].has_changed
+        if (id = @identities[identities.last])
+          if id.has_changed
             @identities[identities.last] = CZMQ::Zconfig.load(id_file)
           end
         else
