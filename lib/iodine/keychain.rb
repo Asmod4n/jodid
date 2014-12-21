@@ -127,6 +127,16 @@
         end
       end
     end
+
+    def encrypt!(identity, password, path, value)
+      if (secret_key = verify(identity, password))
+        nonce = Crypto::SecretBox.nonce
+        Crypto.secretbox!(value, nonce, secret_key)
+        store(identity, path, Sodium.bin2hex(value))
+        store(identity, "#{path}/nonce", Sodium.bin2hex(nonce))
+        [nonce, value.force_encoding(Encoding::ASCII_8BIT)]
+      end
+    end
   end
 
   Keychain.freeze
