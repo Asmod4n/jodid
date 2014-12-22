@@ -16,9 +16,7 @@
       Dir.glob(File.join(@directory, '*.id')) do |id_file|
         identities << File.basename(id_file, '.id')
         if (id = @identities[identities.last])
-          if id.has_changed
-            @identities[identities.last] = CZMQ::Zconfig.load(id_file)
-          end
+          id.reload if id.has_changed
         else
           @identities[identities.last] = CZMQ::Zconfig.load(id_file)
         end
@@ -32,14 +30,7 @@
       reload_ids if File.mtime(@directory) != @mtime
 
       if (id = @identities[identity])
-        if id.has_changed
-          id_file = File.join(@directory, "#{identity}.id")
-          unless File.dirname(id_file) == @directory
-            fail ArgumentError, "identity=#{identity} contains illegal characters", caller
-          end
-          id = @identities[identity] = CZMQ::Zconfig.load(id_file)
-        end
-
+        id.reload if id.has_changed
         id.resolve(path, nil)
       end
     end
