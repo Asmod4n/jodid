@@ -90,7 +90,8 @@ module Iodine
                                                         salt)
       public_key = Crypto::ScalarMult.base(secret_key)
       mac = Crypto.auth(password, secret_key)
-      store(identity, '/auth', salt << mac)
+      store(identity, '/auth/salt', salt)
+      store(identity, '/auth/mac', mac)
       store_public_key(identity, public_key)
       @keychain[identity] = secret_key
       Libzmq.z85_encode public_key
@@ -99,30 +100,29 @@ module Iodine
     end
 
     def verify(identity, password)
-      if (auth = lookup(identity, '/auth'))
-        unless (secret_key = @keychain[identity])
-          secret_key = Crypto::PwHash.scryptsalsa208sha256(
-            Crypto::Auth::KEYBYTES,
-            password,
-            auth[0, Crypto::PwHash::ScryptSalsa208SHA256::SALTBYTES])
-        end
+      unless (secret_key = @keychain[identity])
+        secret_key = Crypto::PwHash.scryptsalsa208sha256(
+                      Crypto::Auth::KEYBYTES,
+                      password,
+                      lookup(identity, '/auth/salt'))
+      end
 
-        if Crypto::Auth.verify(
-          auth[Crypto::PwHash::ScryptSalsa208SHA256::SALTBYTES, Crypto::Auth::BYTES],
-          password,
-          secret_key)
+      if Crypto::Auth.verify( lookup(identity, '/auth/mac'),
+                              password,
+                              secret_key)
 
-          @keychain[identity] = secret_key
-        end
+        @keychain[identity] = secret_key
       end
     ensure
       password.clear
     end
 
     def logout(identity, password)
-      if verify(identity, password)
-        @keychain.delete(identity)
-        true
+      if @keychain.key? identity
+        if verify(identity, password)
+          @keychain.delete(identity)
+          true
+        end
       end
     end
 
@@ -130,14 +130,14 @@ module Iodine
       if (secret_key = verify(identity, password))
         data = String(value)
         nonce = Crypto::SecretBox.nonce
-        Crypto.secretbox(data, nonce, secret_key) << nonce
+        nonce << Crypto.secretbox(data, nonce, secret_key)
       end
     end
 
     def decrypt(identity, password, ciphertext, encoding = Encoding.default_external)
       if (secret_key = verify(identity, password))
-        Crypto::SecretBox.open( ciphertext[0...-Crypto::SecretBox::NONCEBYTES],
-                                ciphertext[-Crypto::SecretBox::NONCEBYTES..-1],
+        Crypto::SecretBox.open( ciphertext[Crypto::SecretBox::NONCEBYTES..-1],
+                                ciphertext[0...Crypto::SecretBox::NONCEBYTES],
                                 secret_key,
                                 encoding)
       end
@@ -147,13 +147,13 @@ module Iodine
       if (secret_key = verify(identity, password))
         data = String(value)
         nonce = Crypto::SecretBox.nonce
-        Crypto.secretbox!(data, nonce, secret_key) << nonce
+        Crypto.secretbox!(data, nonce, secret_key).prepend(nonce)
       end
     end
 
     def decrypt!(identity, password, ciphertext, encoding = Encoding.default_external)
       if (secret_key = verify(identity, password))
-        nonce = ciphertext.slice!(-Crypto::SecretBox::NONCEBYTES..-1)
+        nonce = ciphertext.slice!(0...Crypto::SecretBox::NONCEBYTES)
         Crypto::SecretBox.open!(ciphertext,
                                 nonce,
                                 secret_key,
@@ -166,7 +166,7 @@ module Iodine
         if (public_key = lookup(recipient, '/public_key'))
           data = String(value)
           nonce = Crypto::Box.nonce
-          Crypto.box(data, nonce, public_key, secret_key) << nonce
+          nonce << Crypto.box(data, nonce, public_key, secret_key)
         end
       end
     end
@@ -174,8 +174,8 @@ module Iodine
     def decrypt_from(identity, password, ciphertext, sender, encoding = Encoding.default_external)
       if (secret_key = verify(identity, password))
         if (public_key = lookup(sender, '/public_key'))
-          Crypto::Box.open( ciphertext[0...-Crypto::Box::NONCEBYTES],
-                            ciphertext[-Crypto::Box::NONCEBYTES..-1],
+          Crypto::Box.open( ciphertext[Crypto::Box::NONCEBYTES..-1],
+                            ciphertext[0...Crypto::Box::NONCEBYTES],
                             public_key,
                             secret_key,
                             encoding)
@@ -188,7 +188,7 @@ module Iodine
         if (public_key = lookup(recipient, '/public_key'))
           data = String(value)
           nonce = Crypto::Box.nonce
-          Crypto.box!(data, nonce, public_key, secret_key) << nonce
+          Crypto.box!(data, nonce, public_key, secret_key).prepend(nonce)
         end
       end
     end
@@ -196,9 +196,9 @@ module Iodine
     def decrypt_from!(identity, password, ciphertext, sender, encoding = Encoding.default_external)
       if (secret_key = verify(identity, password))
         if (public_key = lookup(sender, '/public_key'))
-          nonce = ciphertext.slice!(-Crypto::Box::NONCEBYTES..-1)
+          nonce = ciphertext.slice!(0...Crypto::Box::NONCEBYTES)
           Crypto::Box.open!(ciphertext,
-                            nonce
+                            nonce,
                             public_key,
                             secret_key,
                             encoding)
