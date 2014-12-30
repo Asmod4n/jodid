@@ -5,7 +5,7 @@ module Iodine
     extend Forwardable
 
     attr_reader :storage
-    def_delegators :@storage, :fetch, :store
+    def_delegators :@storage, :fetch, :store, :delete, :delete_identity
 
     def initialize(options = {})
       @storage = options.fetch(:storage) do
@@ -36,9 +36,10 @@ module Iodine
         password,
         @storage.fetch(identity, :salt))
 
-      if Crypto::OneTimeAuth.verify( @storage.fetch(identity, :mac),
-                              password,
-                              secret_key)
+      if Crypto::OneTimeAuth.verify(
+        @storage.fetch(identity, :mac),
+        password,
+        secret_key)
 
         Cryptor.new(@storage.fetch(identity, :public_key), secret_key, self)
       end
