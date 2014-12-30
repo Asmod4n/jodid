@@ -10,8 +10,8 @@
       end
 
       def store(identity, key, value)
-        unless (id = @storage[identity])
-          id = @storage[identity] = {}.compare_by_identity
+        id = @storage.fetch(identity) do
+          @storage.store(identity, {}.compare_by_identity)
         end
 
         id.store(key, value)
