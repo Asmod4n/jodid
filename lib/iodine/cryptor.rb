@@ -17,8 +17,7 @@
       Crypto::SecretBox.open(
         ciphertext[Crypto::SecretBox::NONCEBYTES..-1],
         ciphertext[0...Crypto::SecretBox::NONCEBYTES],
-        @secret_key,
-        encoding)
+        @secret_key, encoding)
     end
 
     def secret_box!(value)
@@ -48,14 +47,21 @@
 
     def box_open(ciphertext, encoding = Encoding.default_external)
       public_key = ciphertext[0...Crypto::Box::PUBLICKEYBYTES]
-      shared_secret = @shared_secrets.fetch(public_key) do
+      if (shared_secret = @shared_secrets[public_key])
+        message = Crypto::SecretBox.open(
+          ciphertext[Crypto::Box::PUBLICKEYBYTES + Crypto::Box::NONCEBYTES..-1],
+          ciphertext[Crypto::Box::PUBLICKEYBYTES, Crypto::Box::NONCEBYTES],
+          shared_secret, encoding)
+      else
+        message = Crypto::Box.open(
+          ciphertext[Crypto::Box::PUBLICKEYBYTES + Crypto::Box::NONCEBYTES..-1],
+          ciphertext[Crypto::Box::PUBLICKEYBYTES, Crypto::Box::NONCEBYTES],
+          public_key, @secret_key, encoding)
         @shared_secrets.store(public_key,
           Crypto::Box.beforenm(public_key, @secret_key))
       end
-      Crypto::SecretBox.open(
-        ciphertext[Crypto::Box::PUBLICKEYBYTES + Crypto::Box::NONCEBYTES..-1],
-        ciphertext[Crypto::Box::PUBLICKEYBYTES, Crypto::Box::NONCEBYTES],
-        shared_secret, encoding)
+
+      message
     end
 
     def box!(value, recipient)
@@ -72,13 +78,19 @@
 
     def box_open!(ciphertext, encoding = Encoding.default_external)
       public_key = ciphertext.slice!(0...Crypto::Box::PUBLICKEYBYTES)
-      shared_secret = @shared_secrets.fetch(public_key) do
+      nonce = ciphertext.slice!(0...Crypto::Box::NONCEBYTES)
+      if (shared_secret = @shared_secrets[public_key])
+        message = Crypto::SecretBox.open!(ciphertext, nonce,
+          shared_secret, encoding)
+      else
+        message = Crypto::Box.open!(ciphertext, nonce,
+          public_key, @secret_key, encoding)
         @shared_secrets.store(public_key,
           Crypto::Box.beforenm(public_key, @secret_key))
       end
-      nonce = ciphertext.slice!(0...Crypto::Box::NONCEBYTES)
-      Crypto::SecretBox.open!(ciphertext, nonce,
-                              shared_secret, encoding)
+
+      message
+      end
     end
   end
 
