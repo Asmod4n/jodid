@@ -1,7 +1,7 @@
-﻿iodine
+﻿jodid
 ======
 
-[RubyDoc](http://www.rubydoc.info/github/Asmod4n/iodine/master)
+[RubyDoc](http://www.rubydoc.info/github/Asmod4n/jodid/master)
 
 Requirements
 ============
@@ -22,14 +22,14 @@ brew install libsodium
 Generic
 -------
 ```
-gem install --prerelease iodine
+gem install --prerelease jodid
 ```
 
 Basic usage
 ===========
 
 ```ruby
-bob_chain = Iodine::Keychain.new
+bob_chain = Jodid::Keychain.new
 ```
 
 Create a user
@@ -62,7 +62,7 @@ bob.secretbox_open(ciphertext)
 Public-Key Encryption
 =====================
 ```ruby
-alice_chain = Iodine::Keychain.new
+alice_chain = Jodid::Keychain.new
 
 alice_chain.store_public_key('bob', bob_public_key)
 alice_public_key = alice_chain.auth('alice', 'alice')
