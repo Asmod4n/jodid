@@ -1,6 +1,11 @@
 ﻿module Iodine
   class Cryptor
+    include Sodium::Utils
+
     def initialize(public_key, secret_key, keychain)
+      check_length(public_key, Crypto::Box::PUBLICKEYBYTES, :PublicKey)
+      check_length(secret_key, Crypto::Box::SECRETKEYBYTES, :SecretKey)
+
       @public_key = public_key
       @secret_key = secret_key
       @keychain = keychain
@@ -8,26 +13,26 @@
       @shared_secrets = {}
     end
 
-    def secret_box(value)
+    def secretbox(value)
       nonce = Crypto::SecretBox.nonce
       nonce << Crypto::SecretBox.secretbox(value, nonce, @secret_key)
     end
 
-    def secret_box_open(ciphertext, encoding = Encoding.default_external)
+    def secretbox_open(ciphertext, encoding = Encoding.default_external)
       Crypto::SecretBox.open(
         ciphertext[Crypto::SecretBox::NONCEBYTES..-1],
         ciphertext[0...Crypto::SecretBox::NONCEBYTES],
         @secret_key, encoding)
     end
 
-    def secret_box!(value)
+    def secretbox!(value)
       data = String(value)
       nonce = Crypto::SecretBox.nonce
       Crypto::SecretBox.secretbox!(data, nonce,
         @secret_key).prepend(nonce)
     end
 
-    def secret_box_open!(ciphertext, encoding = Encoding.default_external)
+    def secretbox_open!(ciphertext, encoding = Encoding.default_external)
       nonce = ciphertext.slice!(0...Crypto::SecretBox::NONCEBYTES)
       Crypto::SecretBox.open!(ciphertext, nonce,
                               @secret_key, encoding)
@@ -90,7 +95,6 @@
       end
 
       message
-      end
     end
   end
 
