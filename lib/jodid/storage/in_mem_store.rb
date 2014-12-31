@@ -34,7 +34,7 @@
       end
 
       def store_public_key(identity, public_key)
-        check_length(public_key, Crypto::Box::PUBLICKEYBYTES, :PublicKey)
+        check_length(public_key, Crypto::Sign::PUBLICKEYBYTES, :PublicKey)
 
         store(identity, :public_key, public_key)
         @pk_to_id.store(public_key, identity)

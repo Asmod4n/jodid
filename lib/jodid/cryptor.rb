@@ -5,11 +5,12 @@
     attr_reader :public_key
 
     def initialize(public_key, secret_key, keychain)
-      check_length(public_key, Crypto::Box::PUBLICKEYBYTES, :PublicKey)
-      check_length(secret_key, Crypto::Box::SECRETKEYBYTES, :SecretKey)
+      check_length(public_key, Crypto::Sign::PUBLICKEYBYTES, :PublicKey)
+      check_length(secret_key, Crypto::Sign::SECRETKEYBYTES, :SecretKey)
 
       @public_key = public_key
       @secret_key = secret_key
+      @curve25519_sk = Crypto::Sign::Ed25519.sk_to_curve25519(@secret_key)
       @keychain = keychain
 
       @shared_secrets = {}
@@ -17,34 +18,36 @@
 
     def secretbox(value)
       nonce = Crypto::SecretBox.nonce
-      nonce << Crypto::SecretBox.secretbox(value, nonce, @secret_key)
+      nonce << Crypto::SecretBox.secretbox(value, nonce, @curve25519_sk)
     end
 
     def secretbox_open(ciphertext, encoding = Encoding.default_external)
       Crypto::SecretBox.open(
         ciphertext[Crypto::SecretBox::NONCEBYTES..-1],
         ciphertext[0...Crypto::SecretBox::NONCEBYTES],
-        @secret_key, encoding)
+        @curve25519_sk, encoding)
     end
 
     def secretbox!(value)
       data = String(value)
       nonce = Crypto::SecretBox.nonce
       Crypto::SecretBox.secretbox!(data, nonce,
-        @secret_key).prepend(nonce)
+        @curve25519_sk).prepend(nonce)
     end
 
     def secretbox_open!(ciphertext, encoding = Encoding.default_external)
       nonce = ciphertext.slice!(0...Crypto::SecretBox::NONCEBYTES)
       Crypto::SecretBox.open!(ciphertext, nonce,
-                              @secret_key, encoding)
+                              @curve25519_sk, encoding)
     end
 
     def box(value, recipient)
       public_key = @keychain.fetch(recipient, :public_key)
       shared_secret = @shared_secrets.fetch(public_key) do
         @shared_secrets.store(public_key,
-          Crypto::Box.beforenm(public_key, @secret_key))
+          Crypto::Box.beforenm(
+            Crypto::Sign::Ed25519.pk_to_curve25519(public_key),
+            @curve25519_sk))
       end
       nonce = Crypto::Box.nonce
       ciphertext = Crypto::SecretBox.secretbox(value, nonce,
@@ -53,19 +56,21 @@
     end
 
     def box_open(ciphertext, encoding = Encoding.default_external)
-      public_key = ciphertext[0...Crypto::Box::PUBLICKEYBYTES]
+      public_key = ciphertext[0...Crypto::Sign::PUBLICKEYBYTES]
       if (shared_secret = @shared_secrets[public_key])
         message = Crypto::SecretBox.open(
-          ciphertext[Crypto::Box::PUBLICKEYBYTES + Crypto::Box::NONCEBYTES..-1],
-          ciphertext[Crypto::Box::PUBLICKEYBYTES, Crypto::Box::NONCEBYTES],
+          ciphertext[Crypto::Sign::PUBLICKEYBYTES + Crypto::Box::NONCEBYTES..-1],
+          ciphertext[Crypto::Sign::PUBLICKEYBYTES, Crypto::Box::NONCEBYTES],
           shared_secret, encoding)
       else
+        pk = Crypto::Sign::Ed25519.pk_to_curve25519(public_key)
         message = Crypto::Box.open(
-          ciphertext[Crypto::Box::PUBLICKEYBYTES + Crypto::Box::NONCEBYTES..-1],
-          ciphertext[Crypto::Box::PUBLICKEYBYTES, Crypto::Box::NONCEBYTES],
-          public_key, @secret_key, encoding)
+          ciphertext[Crypto::Sign::PUBLICKEYBYTES + Crypto::Box::NONCEBYTES..-1],
+          ciphertext[Crypto::Sign::PUBLICKEYBYTES, Crypto::Box::NONCEBYTES],
+          pk, @curve25519_sk, encoding)
         @shared_secrets.store(public_key,
-          Crypto::Box.beforenm(public_key, @secret_key))
+          Crypto::Box.beforenm(
+            pk, @curve25519_sk))
       end
 
       message
@@ -75,7 +80,9 @@
       public_key = @keychain.fetch(recipient, :public_key)
       shared_secret = @shared_secrets.fetch(public_key) do
         @shared_secrets.store(public_key,
-          Crypto::Box.beforenm(public_key, @secret_key))
+          Crypto::Box.beforenm(
+            Crypto::Sign::Ed25519.pk_to_curve25519(public_key),
+            @curve25519_sk))
       end
       data = String(value)
       nonce = Crypto::Box.nonce
@@ -84,19 +91,31 @@
     end
 
     def box_open!(ciphertext, encoding = Encoding.default_external)
-      public_key = ciphertext.slice!(0...Crypto::Box::PUBLICKEYBYTES)
+      public_key = ciphertext.slice!(0...Crypto::Sign::PUBLICKEYBYTES)
       nonce = ciphertext.slice!(0...Crypto::Box::NONCEBYTES)
       if (shared_secret = @shared_secrets[public_key])
         message = Crypto::SecretBox.open!(ciphertext, nonce,
           shared_secret, encoding)
       else
+        pk = Crypto::Sign::Ed25519.pk_to_curve25519(public_key)
         message = Crypto::Box.open!(ciphertext, nonce,
-          public_key, @secret_key, encoding)
+          pk, @curve25519_sk, encoding)
         @shared_secrets.store(public_key,
-          Crypto::Box.beforenm(public_key, @secret_key))
+          Crypto::Box.beforenm(pk, @curve25519_sk))
       end
 
       message
+    end
+
+    def sign_detached(message)
+      Crypto::Sign.detached(message, @secret_key).prepend(@public_key)
+    end
+
+    def sign_verify_detached(signature, message)
+      public_key = signature[0...Crypto::Sign::PUBLICKEYBYTES]
+      Crypto::Sign.verify_detached(
+        signature[Crypto::Sign::PUBLICKEYBYTES..-1],
+        message, public_key)
     end
   end
 

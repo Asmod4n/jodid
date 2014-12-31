@@ -17,10 +17,11 @@ module Jodid
 
     def auth(identity, password)
       salt = Crypto::PwHash::ScryptSalsa208SHA256.salt
-      secret_key = Crypto::PwHash::ScryptSalsa208SHA256.scryptsalsa208sha256(
+      key = Crypto::PwHash::ScryptSalsa208SHA256.scryptsalsa208sha256(
         Crypto::OneTimeAuth::KEYBYTES, password, salt)
-      public_key = Crypto::ScalarMult.base(secret_key)
-      mac = Crypto::OneTimeAuth.onetimeauth(password, secret_key)
+      mac = Crypto::OneTimeAuth.onetimeauth(password, key)
+
+      public_key, secret_key = Crypto::Sign.memory_locked_seed_keypair(key)
       @storage.store(identity, :salt, salt)
       store_public_key(identity, public_key)
       @storage.store(identity, :mac, mac)
@@ -30,14 +31,14 @@ module Jodid
     end
 
     def verify(identity, password)
-      secret_key = Crypto::PwHash::ScryptSalsa208SHA256.scryptsalsa208sha256(
+      key = Crypto::PwHash::ScryptSalsa208SHA256.scryptsalsa208sha256(
         Crypto::OneTimeAuth::KEYBYTES, password,
         @storage.fetch(identity, :salt))
 
       if Crypto::OneTimeAuth.verify(@storage.fetch(identity, :mac),
-        password, secret_key)
+        password, key)
 
-        Cryptor.new(@storage.fetch(identity, :public_key), secret_key, self)
+        Cryptor.new(*Crypto::Sign.memory_locked_seed_keypair(key), self)
       end
     ensure
       password.clear
