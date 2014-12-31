@@ -1,3 +1,3 @@
 ﻿module Iodine
-  VERSION = Gem::Version.new('0.0.3.pre')
+  VERSION = Gem::Version.new('0.0.4.pre')
 end
