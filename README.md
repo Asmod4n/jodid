@@ -1,9 +1,12 @@
 ﻿iodine
 ======
 
+[RubyDoc](http://www.rubydoc.info/github/Asmod4n/iodine/master)
+
 Requirements
 ============
 ruby >= 1.9.3
+
 libsodium >= 1.0.1
 
 
