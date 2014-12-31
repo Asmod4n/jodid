@@ -3,17 +3,18 @@
 
 Requirements
 ============
-```
 ruby >= 1.9.3
 libsodium >= 1.0.1
-```
+
 
 Installation instructions
 =========================
 
 Mac OS X/Linux
 --------------
+```bash
 brew install libsodium
+```
 
 Generic
 -------
