@@ -56,5 +56,6 @@ ciphertext = bob.box('hello', 'alice')
 decrypt a ciphertext
 --------------------
 ```ruby
-alice.box_open(ciphertext)
+puts alice.box_open(ciphertext)
+puts alice_chain.fetch_identity(ciphertext[0...Crypto::Box::PUBLICKEYBYTES])
 ```
