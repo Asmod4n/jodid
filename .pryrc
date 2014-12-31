@@ -1,2 +1,2 @@
 ﻿require 'bundler/setup'
-require 'iodine'
+require 'jodid'

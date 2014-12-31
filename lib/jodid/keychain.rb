@@ -1,7 +1,7 @@
 ﻿require 'forwardable'
 require 'base64'
 
-module Iodine
+module Jodid
   class Keychain
     extend Forwardable
 

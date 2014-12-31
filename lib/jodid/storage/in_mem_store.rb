@@ -1,4 +1,4 @@
-﻿module Iodine
+﻿module Jodid
   module Storage
     class InMemStore
       include Sodium::Utils

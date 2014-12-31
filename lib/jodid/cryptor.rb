@@ -1,4 +1,4 @@
-﻿module Iodine
+﻿module Jodid
   class Cryptor
     include Sodium::Utils
 
