@@ -1,20 +1,40 @@
-iodine
+﻿iodine
 ======
 
-basic usage
+Requirements
+============
+```
+ruby >= 1.9.3
+libsodium >= 1.0.1
+```
+
+Installation instructions
+=========================
+
+Mac OS X/Linux
+--------------
+brew install libsodium
+
+Generic
+-------
+```
+gem install --prerelease iodine
+```
+
+Basic usage
 ===========
 
 ```ruby
 bob_chain = Iodine::Keychain.new
 ```
 
-create a user
+Create a user
 -------------
 ```ruby
 bob_public_key = bob_chain.auth('bob', 'bob')
 ```
 
-authenticate a user
+Authenticate a user
 -------------------
 ```ruby
 bob = bob_chain.verify('bob', 'bob')
@@ -23,13 +43,13 @@ bob = bob_chain.verify('bob', 'bob')
 Secret-Key Encryption
 ===================
 
-encrypt a plaintext
+Encrypt a plaintext
 -------------------
 ```ruby
 ciphertext = bob.secretbox('plaintext')
 ```
 
-decrypt a ciphertext
+Decrypt a ciphertext
 --------------------
 ```ruby
 bob.secretbox_open(ciphertext)
@@ -47,13 +67,13 @@ bob_chain.store_public_key('alice', alice_public_key)
 alice = alice_chain.verify('alice', 'alice')
 ```
 
-encrypt a plaintext
+Encrypt a plaintext
 --------------------
 ```ruby
 ciphertext = bob.box('hello', 'alice')
 ```
 
-decrypt a ciphertext
+Decrypt a ciphertext
 --------------------
 ```ruby
 puts alice.box_open(ciphertext)
