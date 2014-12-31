@@ -6,7 +6,7 @@ module Iodine
     extend Forwardable
 
     attr_reader :storage
-    def_delegators :@storage, :fetch, :store, :delete, :delete_identity
+    def_delegators :@storage, :fetch, :fetch_identity, :store, :delete, :delete_identity
 
     def initialize(options = {})
       @storage = options.fetch(:storage) do
@@ -46,13 +46,13 @@ module Iodine
     def store_public_key(identity, public_key)
       case public_key.bytesize
       when 64 # hex
-        @storage.store(identity, :public_key, Sodium::Utils.hex2bin(public_key))
+        @storage.store_public_key(identity, Sodium::Utils.hex2bin(public_key))
       when 44 # base64
-        @storage.store(identity, :public_key, Base64.strict_decode64(public_key))
+        @storage.store_public_key(identity, Base64.strict_decode64(public_key))
       when 40 # z85
-        @storage.store(identity, :public_key, Libzmq.z85_decode(public_key))
+        @storage.store_public_key(identity, Libzmq.z85_decode(public_key))
       when 32 # raw
-        @storage.store(identity, :public_key, public_key)
+        @storage.store_public_key(identity, public_key)
       else
         fail Sodium::LengthError, "public_key is not in hex, base64 z85 or raw encoding", caller
       end

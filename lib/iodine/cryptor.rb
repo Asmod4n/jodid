@@ -2,6 +2,8 @@
   class Cryptor
     include Sodium::Utils
 
+    attr_reader :public_key
+
     def initialize(public_key, secret_key, keychain)
       check_length(public_key, Crypto::Box::PUBLICKEYBYTES, :PublicKey)
       check_length(secret_key, Crypto::Box::SECRETKEYBYTES, :SecretKey)
