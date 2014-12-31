@@ -1,4 +1,5 @@
 ﻿require 'forwardable'
+require 'base64'
 
 module Iodine
   class Keychain
@@ -21,7 +22,7 @@ module Iodine
       public_key = Crypto::ScalarMult.base(secret_key)
       mac = Crypto::OneTimeAuth.onetimeauth(password, secret_key)
       @storage.store(identity, :salt, salt)
-      @storage.store(identity, :public_key, public_key)
+      store_public_key(identity, public_key)
       @storage.store(identity, :mac, mac)
       Libzmq.z85_encode public_key
     ensure
@@ -36,10 +37,25 @@ module Iodine
       if Crypto::OneTimeAuth.verify(@storage.fetch(identity, :mac),
         password, secret_key)
 
-        Cryptor.new(Crypto::ScalarMult.base(secret_key), secret_key, self)
+        Cryptor.new(@storage.fetch(identity, :public_key), secret_key, self)
       end
     ensure
       password.clear
+    end
+
+    def store_public_key(identity, public_key)
+      case public_key.bytesize
+      when 64 # hex
+        @storage.store(identity, :public_key, Sodium::Utils.hex2bin(public_key))
+      when 44 # base64
+        @storage.store(identity, :public_key, Base64.strict_decode64(public_key))
+      when 40 # z85
+        @storage.store(identity, :public_key, Libzmq.z85_decode(public_key))
+      when 32 # raw
+        @storage.store(identity, :public_key, public_key)
+      else
+        fail Sodium::LengthError, "public_key is not in hex, base64 z85 or raw encoding", caller
+      end
     end
   end
 
