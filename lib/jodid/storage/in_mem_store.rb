@@ -8,6 +8,10 @@
         @pk_to_id = {}
       end
 
+      def has_identity?(identity)
+        @storage.has_key?(identity)
+      end
+
       def fetch(identity, key)
         @storage.fetch(identity).fetch(key)
       end

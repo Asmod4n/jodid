@@ -6,7 +6,8 @@ module Jodid
     extend Forwardable
 
     attr_reader :storage
-    def_delegators :@storage, :fetch, :fetch_identity, :store, :delete, :delete_identity
+    def_delegators :@storage, :has_identity?, :fetch, :fetch_identity,
+    :store, :delete, :delete_identity
 
     def initialize(options = {})
       @storage = options.fetch(:storage) do
