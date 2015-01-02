@@ -24,13 +24,14 @@ module Jodid
       seed = RandomBytes.buf(Crypto::Sign::SEEDBYTES)
       ciphertext = Crypto::AEAD::Chacha20Poly1305.encrypt(seed, identity, nonce, key)
       pk, sk = Crypto::Sign.memory_locked_seed_keypair(seed)
-      seed.clear
+      Sodium.memzero(seed, Crypto::Sign::SEEDBYTES)
       @storage.store(identity, :salt, salt)
       @storage.store(identity, :nonce, nonce)
       @storage.store(identity, :ciphertext, ciphertext)
       store_public_key(identity, pk)
       Base64.strict_encode64(pk)
     ensure
+      Sodium.memzero(password, password.bytesize)
       password.clear
     end
 
@@ -42,9 +43,10 @@ module Jodid
         @storage.fetch(identity, :ciphertext),
         identity, @storage.fetch(identity, :nonce), key)
       cryptor = Cryptor.new(*Crypto::Sign.memory_locked_seed_keypair(seed), self)
-      seed.clear
+      Sodium.memzero(seed, Crypto::Sign::SEEDBYTES)
       cryptor
     ensure
+      Sodium.memzero(password, password.bytesize)
       password.clear
     end
 
