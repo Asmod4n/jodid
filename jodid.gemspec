@@ -13,6 +13,6 @@ Gem::Specification.new do |gem|
   gem.version      = Jodid::VERSION
 
   gem.required_ruby_version = '>= 1.9.3'
-  gem.add_dependency 'ffi-libsodium', '>= 0.4.5'
+  gem.add_dependency 'ffi-libsodium', '>= 0.4.7'
   gem.add_development_dependency 'bundler', '>= 1.7'
 end

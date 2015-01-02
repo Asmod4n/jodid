@@ -37,7 +37,8 @@
 
     def secretbox_open!(ciphertext, encoding = Encoding.default_external)
       nonce = ciphertext.slice!(0...Crypto::SecretBox::NONCEBYTES)
-      Crypto::SecretBox.open!(ciphertext, nonce,
+      mac = ciphertext.slice!(0...Crypto::SecretBox::MACBYTES)
+      Crypto::SecretBox.open_detached!(ciphertext, mac, nonce,
                               @curve25519_sk, encoding)
     end
 
@@ -93,12 +94,13 @@
     def box_open!(ciphertext, encoding = Encoding.default_external)
       public_key = ciphertext.slice!(0...Crypto::Sign::PUBLICKEYBYTES)
       nonce = ciphertext.slice!(0...Crypto::Box::NONCEBYTES)
+      mac = ciphertext.slice!(0...Crypto::Box::MACBYTES)
       if (shared_secret = @shared_secrets[public_key])
-        message = Crypto::SecretBox.open!(ciphertext, nonce,
+        message = Crypto::SecretBox.open_detached!(ciphertext, mac, nonce,
           shared_secret, encoding)
       else
         pk = Crypto::Sign::Ed25519.pk_to_curve25519(public_key)
-        message = Crypto::Box.open!(ciphertext, nonce,
+        message = Crypto::Box.open_detached!(ciphertext, mac, nonce,
           pk, @curve25519_sk, encoding)
         @shared_secrets.store(public_key,
           Crypto::Box.beforenm(pk, @curve25519_sk))
