@@ -20,13 +20,16 @@ module Jodid
       salt = Crypto::PwHash::ScryptSalsa208SHA256.salt
       key = Crypto::PwHash::ScryptSalsa208SHA256.scryptsalsa208sha256(
         Crypto::OneTimeAuth::KEYBYTES, password, salt)
-      mac = Crypto::OneTimeAuth.onetimeauth(password, key)
-
-      public_key, secret_key = Crypto::Sign.memory_locked_seed_keypair(key)
+      nonce = Crypto::AEAD::Chacha20Poly1305.nonce
+      seed = RandomBytes.buf(Crypto::Sign::SEEDBYTES)
+      ciphertext = Crypto::AEAD::Chacha20Poly1305.encrypt(seed, identity, nonce, key)
+      pk, sk = Crypto::Sign.memory_locked_seed_keypair(seed)
+      seed.clear
       @storage.store(identity, :salt, salt)
-      store_public_key(identity, public_key)
-      @storage.store(identity, :mac, mac)
-      Base64.strict_encode64 public_key
+      @storage.store(identity, :nonce, nonce)
+      @storage.store(identity, :ciphertext, ciphertext)
+      store_public_key(identity, pk)
+      Base64.strict_encode64(pk)
     ensure
       password.clear
     end
@@ -35,12 +38,12 @@ module Jodid
       key = Crypto::PwHash::ScryptSalsa208SHA256.scryptsalsa208sha256(
         Crypto::OneTimeAuth::KEYBYTES, password,
         @storage.fetch(identity, :salt))
-
-      if Crypto::OneTimeAuth.verify(@storage.fetch(identity, :mac),
-        password, key)
-
-        Cryptor.new(*Crypto::Sign.memory_locked_seed_keypair(key), self)
-      end
+      seed = Crypto::AEAD::Chacha20Poly1305.decrypt(
+        @storage.fetch(identity, :ciphertext),
+        identity, @storage.fetch(identity, :nonce), key)
+      cryptor = Cryptor.new(*Crypto::Sign.memory_locked_seed_keypair(seed), self)
+      seed.clear
+      cryptor
     ensure
       password.clear
     end
