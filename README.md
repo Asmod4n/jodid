@@ -88,7 +88,7 @@ Public-Key Signatures
 =====================
 ```ruby
 message = 'good morning'
-``
+```
 
 Generate a signature for a message
 ----------------------------------
