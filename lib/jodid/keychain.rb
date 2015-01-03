@@ -19,10 +19,11 @@ module Jodid
     def auth(identity, password)
       salt = Crypto::PwHash::ScryptSalsa208SHA256.salt
       key = Crypto::PwHash::ScryptSalsa208SHA256.scryptsalsa208sha256(
-        Crypto::OneTimeAuth::KEYBYTES, password, salt)
+        Crypto::AEAD::Chacha20Poly1305::KEYBYTES, password, salt)
       nonce = Crypto::AEAD::Chacha20Poly1305.nonce
       seed = RandomBytes.buf(Crypto::Sign::SEEDBYTES)
-      ciphertext = Crypto::AEAD::Chacha20Poly1305.encrypt(seed, identity, nonce, key)
+      ciphertext = Crypto::AEAD::Chacha20Poly1305.encrypt(seed,
+        identity, nonce, key)
       pk, sk = Crypto::Sign.memory_locked_seed_keypair(seed)
       Sodium.memzero(seed, Crypto::Sign::SEEDBYTES)
       @storage.store(identity, :salt, salt)
@@ -37,7 +38,7 @@ module Jodid
 
     def verify(identity, password)
       key = Crypto::PwHash::ScryptSalsa208SHA256.scryptsalsa208sha256(
-        Crypto::OneTimeAuth::KEYBYTES, password,
+        Crypto::AEAD::Chacha20Poly1305::KEYBYTES, password,
         @storage.fetch(identity, :salt))
       seed = Crypto::AEAD::Chacha20Poly1305.decrypt(
         @storage.fetch(identity, :ciphertext),

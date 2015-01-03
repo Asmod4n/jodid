@@ -83,3 +83,21 @@ Decrypt a ciphertext
 puts alice.box_open(ciphertext)
 puts alice_chain.fetch_identity(ciphertext[0...Crypto::Box::PUBLICKEYBYTES])
 ```
+
+Public-Key Signatures
+=====================
+```ruby
+message = 'good morning'
+``
+
+Generate a signature for a message
+----------------------------------
+```ruby
+sigature = alice.sign_detached(message)
+```
+
+Verify a message signature
+--------------------------
+```ruby
+alice.sign_verify_detached(signature, message)
+```
