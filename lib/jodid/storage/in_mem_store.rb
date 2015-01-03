@@ -3,7 +3,9 @@
     class InMemStore
       include Sodium::Utils
 
-      def initialize
+      def initialize(options = {}, &key_not_found)
+        @key_not_found = key_not_found
+
         @storage = {}
         @pk_to_id = {}
       end
@@ -13,7 +15,7 @@
       end
 
       def fetch(identity, key)
-        @storage.fetch(identity).fetch(key)
+        @storage.fetch(identity, &@key_not_found).fetch(key, &@key_not_found)
       end
 
       def fetch_identity(public_key)
@@ -45,7 +47,7 @@
       end
 
       def delete(identity, key)
-        @storage.fetch(identity).delete(key)
+        @storage.fetch(identity, &@key_not_found).delete(key)
       end
 
       def delete_identity(identity)

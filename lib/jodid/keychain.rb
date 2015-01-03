@@ -9,10 +9,10 @@ module Jodid
     def_delegators :@storage, :has_identity?, :fetch, :fetch_identity,
     :store, :delete, :delete_identity
 
-    def initialize(options = {})
+    def initialize(options = {}, &key_not_found)
       @storage = options.fetch(:storage) do
         require_relative 'storage/in_mem_store'
-        Storage::InMemStore.new
+        Storage::InMemStore.new(options, &key_not_found)
       end
     end
 
