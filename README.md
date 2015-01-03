@@ -5,9 +5,9 @@
 
 Requirements
 ============
-ruby >= 1.9.3
+[ruby](https://www.ruby-lang.org/) >= 1.9.3
 
-libsodium >= 1.0.1
+[libsodium](http://doc.libsodium.org) >= 1.0.1
 
 
 Installation instructions
