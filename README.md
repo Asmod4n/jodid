@@ -1,4 +1,6 @@
-﻿jodid
+This it not maintained.
+
+ jodid
 ======
 
 [RubyDoc](http://www.rubydoc.info/github/Asmod4n/jodid/master)
